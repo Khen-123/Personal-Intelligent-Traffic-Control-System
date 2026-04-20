@@ -10,6 +10,7 @@ const trafficSystem = {
 
 const UI = {
   switchBtn: null,
+  clearLogsBtn: null,
   nsText: null,
   ewText: null,
   logList: null,
@@ -120,14 +121,19 @@ function moveVehicle(vehicle, deltaSeconds) {
   const speed = vehicleMotion[direction].speed;
   const road = vehicle.closest(".road");
   const isNSRoad = road.classList.contains("road-ns");
+  const laneDirection = vehicle.dataset.flow === "reverse" ? -1 : 1;
+  const signedSpeed = speed * laneDirection;
 
   const trackLength = isNSRoad ? road.clientHeight : road.clientWidth;
   const carLength = isNSRoad ? vehicle.offsetHeight : vehicle.offsetWidth;
   const loopLength = trackLength + carLength;
 
-  let nextPosition = vehicle.motionPosition + speed * deltaSeconds;
+  let nextPosition = vehicle.motionPosition + signedSpeed * deltaSeconds;
   if (nextPosition > loopLength) {
     nextPosition -= loopLength;
+  }
+  if (nextPosition < 0) {
+    nextPosition += loopLength;
   }
 
   vehicle.motionPosition = nextPosition;
@@ -136,11 +142,11 @@ function moveVehicle(vehicle, deltaSeconds) {
   if (isNSRoad) {
     vehicle.style.top = `${offset}px`;
     vehicle.style.left = vehicle.dataset.lane === "a" ? "24%" : "64%";
-    vehicle.style.transform = "translate(-50%, 0)";
+    vehicle.style.transform = `translate(-50%, 0) ${laneDirection < 0 ? "rotate(180deg)" : "rotate(0deg)"}`;
   } else {
     vehicle.style.left = `${offset}px`;
     vehicle.style.top = vehicle.dataset.lane === "a" ? "30%" : "72%";
-    vehicle.style.transform = "translate(0, -50%)";
+    vehicle.style.transform = `translate(0, -50%) ${laneDirection < 0 ? "rotate(180deg)" : "rotate(0deg)"}`;
   }
 }
 
@@ -176,7 +182,8 @@ function initVehicleSimulation() {
   UI.vehicles.forEach((vehicle, index) => {
     const lane = vehicle.parentElement.classList.contains("lane-a") ? "a" : "b";
     vehicle.dataset.lane = lane;
-    vehicle.motionPosition = index * 55;
+    vehicle.dataset.flow = lane === "a" ? "forward" : "reverse";
+    vehicle.motionPosition = lane === "a" ? (index + 1) * 55 : 190 + index * 55;
   });
 
   if (animationFrameId) {
@@ -184,6 +191,16 @@ function initVehicleSimulation() {
   }
 
   animationFrameId = window.requestAnimationFrame(animateVehicles);
+}
+
+/**
+ * Clears log entries from the panel while preserving runtime state.
+ * Control flow: removes list children synchronously and then logs the clear operation.
+ * Event loop note: this operation is immediate DOM mutation and does not spawn async work.
+ */
+function clearLogs() {
+  UI.logList.innerHTML = "";
+  addLog("System logs cleared.");
 }
 
 /**
@@ -267,6 +284,7 @@ function handleLogic() {
  */
 function init() {
   UI.switchBtn = document.querySelector("#switchBtn");
+  UI.clearLogsBtn = document.querySelector("#clearLogsBtn");
   UI.nsText = document.querySelector("#ns-state-text");
   UI.ewText = document.querySelector("#ew-state-text");
   UI.logList = document.querySelector("#logList");
@@ -286,6 +304,7 @@ function init() {
   };
 
   UI.switchBtn.addEventListener("click", handleLogic);
+  UI.clearLogsBtn.addEventListener("click", clearLogs);
 
   initVehicleSimulation();
   updateUI();

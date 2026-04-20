@@ -13,7 +13,6 @@
     <section class="card simulation-card">
       <header class="card-header">
         <h1>Intelligent Traffic Control Dashboard</h1>
-        <button id="switchBtn" class="glass-btn">Trigger Safe Switch</button>
       </header>
 
       <div class="intersection-grid">
@@ -79,6 +78,14 @@
       <h2>System Logs</h2>
       <ul id="logList" class="log-list"></ul>
     </aside>
+
+    <section class="card control-panel" aria-label="Traffic Control Panel">
+      <h2>Control Panel</h2>
+      <div class="control-actions">
+        <button id="switchBtn" class="glass-btn">Trigger Safe Switch</button>
+        <button id="clearLogsBtn" class="glass-btn secondary-btn" type="button">Clear Logs</button>
+      </div>
+    </section>
   </main>
 
   <script src="script.js"></script>
