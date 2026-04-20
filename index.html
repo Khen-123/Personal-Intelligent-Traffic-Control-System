@@ -28,10 +28,18 @@
 
         <article class="intersection" id="ew-intersection">
           <h2>East-West</h2>
-          <div class="traffic-light" data-direction="EW">
-            <span class="light red" id="ew-red"></span>
-            <span class="light yellow" id="ew-yellow"></span>
-            <span class="light green" id="ew-green"></span>
+          <div class="signal-cluster">
+            <div class="traffic-light" data-direction="EW">
+              <span class="light red" id="ew-red"></span>
+              <span class="light yellow" id="ew-yellow"></span>
+              <span class="light green" id="ew-green"></span>
+            </div>
+            <div class="pedestrian-signal" id="ped-signal" data-state="DISABLED" aria-label="Pedestrian signal">
+              <span class="ped-signal-label">Pedestrian</span>
+              <span class="ped-light ped-stop" id="ped-red"></span>
+              <span class="ped-light ped-walk" id="ped-green"></span>
+              <strong id="ped-state-text">DISABLED</strong>
+            </div>
           </div>
           <p class="state-label">State: <strong id="ew-state-text">RED</strong></p>
         </article>
@@ -71,6 +79,18 @@
             <div class="crosswalk crosswalk-end" aria-hidden="true"></div>
           </div>
         </article>
+
+        <article class="road-card pedestrian-card">
+          <h3>Pedestrian Lane (Crosswalk)</h3>
+          <div class="pedestrian-lane" id="pedestrian-lane" data-state="DISABLED">
+            <div class="ped-lane-track">
+              <span class="pedestrian-figure" data-flow="forward" aria-hidden="true"></span>
+              <span class="pedestrian-figure" data-flow="forward" aria-hidden="true"></span>
+              <span class="pedestrian-figure" data-flow="reverse" aria-hidden="true"></span>
+              <span class="pedestrian-figure" data-flow="reverse" aria-hidden="true"></span>
+            </div>
+          </div>
+        </article>
       </section>
     </section>
 
@@ -83,6 +103,8 @@
       <h2>Control Panel</h2>
       <div class="control-actions">
         <button id="switchBtn" class="glass-btn">Trigger Safe Switch</button>
+        <button id="togglePedBtn" class="glass-btn secondary-btn" type="button" aria-pressed="false">Pedestrian System: OFF</button>
+        <span id="pedModeStatus" class="mode-status" aria-live="polite">Pedestrian Mode: OFF</span>
         <button id="clearLogsBtn" class="glass-btn secondary-btn" type="button">Clear Logs</button>
       </div>
     </section>

@@ -3,6 +3,11 @@ const trafficSystem = {
     NS: { state: "GREEN" },
     EW: { state: "RED" }
   },
+  pedestrian: {
+    enabled: false,
+    state: "DISABLED",
+    isDeactivating: false
+  },
   activeDirection: "NS",
   isTransitioning: false,
   queuedSwitch: false
@@ -10,15 +15,22 @@ const trafficSystem = {
 
 const UI = {
   switchBtn: null,
+  togglePedBtn: null,
+  pedModeStatus: null,
   clearLogsBtn: null,
   nsText: null,
   ewText: null,
+  pedStateText: null,
   logList: null,
   nsRoad: null,
   ewRoad: null,
+  pedestrianLane: null,
   vehicles: [],
+  pedestrians: [],
   nsLights: {},
-  ewLights: {}
+  ewLights: {},
+  pedLights: {},
+  pedLightBox: null
 };
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -27,7 +39,8 @@ let previousFrameTime = 0;
 
 const vehicleMotion = {
   NS: { speed: 0, targetSpeed: 120 },
-  EW: { speed: 0, targetSpeed: 0 }
+  EW: { speed: 0, targetSpeed: 0 },
+  PED: { speed: 0, targetSpeed: 0 }
 };
 
 /**
@@ -52,8 +65,9 @@ function addLog(message) {
  * returns and the call stack is clear.
  */
 function updateUI() {
-  const ns = trafficSystem.intersections.NS.state;
-  const ew = trafficSystem.intersections.EW.state;
+  const ns = trafficSystem.pedestrian.enabled ? "RED" : trafficSystem.intersections.NS.state;
+  const ew = trafficSystem.pedestrian.enabled ? "RED" : trafficSystem.intersections.EW.state;
+  const pedestrianState = getPedestrianState();
 
   UI.nsLights.red.classList.toggle("active", ns === "RED");
   UI.nsLights.yellow.classList.toggle("active", ns === "YELLOW");
@@ -65,14 +79,52 @@ function updateUI() {
 
   UI.nsText.textContent = ns;
   UI.ewText.textContent = ew;
+  UI.pedStateText.textContent = pedestrianState;
   UI.switchBtn.disabled = trafficSystem.isTransitioning;
+  UI.togglePedBtn.disabled = trafficSystem.isTransitioning || trafficSystem.pedestrian.isDeactivating;
+  UI.togglePedBtn.textContent = trafficSystem.pedestrian.enabled ? "Pedestrian System: ON" : "Pedestrian System: OFF";
+  UI.togglePedBtn.setAttribute("aria-pressed", trafficSystem.pedestrian.enabled ? "true" : "false");
+  UI.pedModeStatus.textContent = trafficSystem.pedestrian.enabled ? "Pedestrian Mode: ON" : "Pedestrian Mode: OFF";
+  UI.pedModeStatus.classList.toggle("on", trafficSystem.pedestrian.enabled);
 
   UI.nsRoad.setAttribute("data-signal", ns);
   UI.ewRoad.setAttribute("data-signal", ew);
+  UI.pedestrianLane.setAttribute("data-state", pedestrianState);
 
   // Speed targets are state-driven so road motion always mirrors light logic.
   vehicleMotion.NS.targetSpeed = getTargetSpeed(ns);
   vehicleMotion.EW.targetSpeed = getTargetSpeed(ew);
+  vehicleMotion.PED.targetSpeed = getPedestrianTargetSpeed(pedestrianState);
+
+  UI.pedLights.stop.classList.toggle("active", pedestrianState === "STOP" || pedestrianState === "DISABLED");
+  UI.pedLights.walk.classList.toggle("active", pedestrianState === "WALK" || pedestrianState === "RUN");
+  UI.pedLightBox.setAttribute("data-state", pedestrianState);
+}
+
+/**
+ * Derives pedestrian signal state from EW traffic conditions and feature toggle.
+ * Control flow: when disabled, it short-circuits to DISABLED; otherwise it maps EW states into
+ * STOP/WALK/RUN phases so pedestrian behavior remains synchronized with the main system.
+ * Event loop note: this pure derivation is synchronous and safe to call every UI refresh.
+ */
+function getPedestrianState() {
+  if (trafficSystem.pedestrian.enabled) {
+    if (trafficSystem.pedestrian.isDeactivating) {
+      return trafficSystem.pedestrian.state;
+    }
+
+    trafficSystem.pedestrian.state = "WALK";
+    return trafficSystem.pedestrian.state;
+  }
+
+  if (!trafficSystem.pedestrian.enabled && trafficSystem.pedestrian.isDeactivating) {
+    return trafficSystem.pedestrian.state;
+  }
+
+  if (!trafficSystem.pedestrian.enabled) {
+    trafficSystem.pedestrian.state = "DISABLED";
+    return trafficSystem.pedestrian.state;
+  }
 }
 
 /**
@@ -93,6 +145,40 @@ function getTargetSpeed(state) {
 }
 
 /**
+ * Converts pedestrian signal mode into animation speed for crossing figures.
+ * Control flow: WALK and RUN map to distinct velocities; STOP and DISABLED map to zero.
+ * Event loop note: pure computation keeps animation loop deterministic frame-to-frame.
+ */
+function getPedestrianTargetSpeed(state) {
+  if (state === "WALK") {
+    return 42;
+  }
+
+  if (state === "RUN") {
+    return 86;
+  }
+
+  return 0;
+}
+
+/**
+ * Computes smooth speed targets for pedestrians during state changes.
+ * Control flow: RUN is intentionally only moderately faster than WALK so the visual shift appears gradual.
+ * Event loop note: called from updateUI and consumed by the requestAnimationFrame easing loop.
+ */
+function getPedestrianRampRate(state) {
+  if (state === "WALK") {
+    return 70;
+  }
+
+  if (state === "RUN") {
+    return 85;
+  }
+
+  return 55;
+}
+
+/**
  * Smoothly eases a direction's speed toward its target based on frame delta.
  * Control flow: acceleration/deceleration are clamped per frame to avoid sudden jumps.
  * Event loop note: this runs inside requestAnimationFrame, so updates are synchronized to paint frames.
@@ -106,7 +192,10 @@ function easeDirectionalSpeed(direction, deltaSeconds) {
     return;
   }
 
-  const rampRate = difference > 0 ? 130 : 80;
+  let rampRate = difference > 0 ? 130 : 80;
+  if (direction === "PED") {
+    rampRate = getPedestrianRampRate(trafficSystem.pedestrian.state);
+  }
   const step = Math.sign(difference) * Math.min(Math.abs(difference), rampRate * deltaSeconds);
   motion.speed += step;
 }
@@ -151,6 +240,32 @@ function moveVehicle(vehicle, deltaSeconds) {
 }
 
 /**
+ * Advances a pedestrian across the crosswalk and loops at lane ends.
+ * Control flow: forward and reverse lanes use opposite signed speeds but share one wrap equation.
+ * Event loop note: called within requestAnimationFrame, so motion is synchronized to paint timing.
+ */
+function movePedestrian(figure, deltaSeconds) {
+  const laneDirection = figure.dataset.flow === "reverse" ? -1 : 1;
+  const signedSpeed = vehicleMotion.PED.speed * laneDirection;
+  const lane = UI.pedestrianLane;
+  const trackLength = lane.clientWidth;
+  const bodyLength = figure.offsetWidth;
+  const loopLength = trackLength + bodyLength;
+
+  let nextPosition = figure.motionPosition + signedSpeed * deltaSeconds;
+  if (nextPosition > loopLength) {
+    nextPosition -= loopLength;
+  }
+  if (nextPosition < 0) {
+    nextPosition += loopLength;
+  }
+
+  figure.motionPosition = nextPosition;
+  figure.style.left = `${nextPosition - bodyLength}px`;
+  figure.style.transform = `translateY(-50%) ${laneDirection < 0 ? "scaleX(-1)" : "scaleX(1)"}`;
+}
+
+/**
  * Main animation loop for the road simulation.
  * Control flow: calculates frame delta, eases each direction's speed, then moves all vehicles.
  * Event loop note: requestAnimationFrame schedules the next callback in the browser's render phase,
@@ -166,8 +281,10 @@ function animateVehicles(timestamp) {
 
   easeDirectionalSpeed("NS", deltaSeconds);
   easeDirectionalSpeed("EW", deltaSeconds);
+  easeDirectionalSpeed("PED", deltaSeconds);
 
   UI.vehicles.forEach((vehicle) => moveVehicle(vehicle, deltaSeconds));
+  UI.pedestrians.forEach((figure) => movePedestrian(figure, deltaSeconds));
   animationFrameId = window.requestAnimationFrame(animateVehicles);
 }
 
@@ -178,6 +295,7 @@ function animateVehicles(timestamp) {
  */
 function initVehicleSimulation() {
   UI.vehicles = Array.from(document.querySelectorAll(".vehicle"));
+  UI.pedestrians = Array.from(document.querySelectorAll(".pedestrian-figure"));
 
   UI.vehicles.forEach((vehicle, index) => {
     const lane = vehicle.parentElement.classList.contains("lane-a") ? "a" : "b";
@@ -186,11 +304,110 @@ function initVehicleSimulation() {
     vehicle.motionPosition = lane === "a" ? (index + 1) * 55 : 190 + index * 55;
   });
 
+  UI.pedestrians.forEach((figure, index) => {
+    figure.motionPosition = figure.dataset.flow === "reverse" ? 210 + index * 65 : index * 58;
+  });
+
   if (animationFrameId) {
     window.cancelAnimationFrame(animationFrameId);
   }
 
   animationFrameId = window.requestAnimationFrame(animateVehicles);
+}
+
+/**
+ * Toggles pedestrian simulation feature and keeps state transitions explicit.
+ * Control flow: flips enabled flag, refreshes UI bindings, and logs activation changes.
+ * Event loop note: synchronous toggle; animation loop reads new target speed on next frame.
+ */
+function togglePedestrianSystem() {
+  if (trafficSystem.isTransitioning || trafficSystem.pedestrian.isDeactivating) {
+    return;
+  }
+
+  if (trafficSystem.pedestrian.enabled) {
+    deactivatePedestrianMode();
+    return;
+  }
+
+  activatePedestrianMode();
+}
+
+/**
+ * Activates pedestrian priority mode by forcing all vehicles to red and enabling crossing.
+ * Control flow: turns on override state, clears pending switch requests, and forces an all-red layout.
+ * Event loop note: synchronous state mutation; running async transitions observe this on their next await.
+ */
+async function activatePedestrianMode() {
+  if (trafficSystem.isTransitioning || trafficSystem.pedestrian.enabled) {
+    return;
+  }
+
+  trafficSystem.isTransitioning = true;
+  updateUI();
+
+  const nsState = trafficSystem.intersections.NS.state;
+  const ewState = trafficSystem.intersections.EW.state;
+
+  addLog("Pedestrian mode requested. Running safe all-red transition...");
+
+  if (nsState === "GREEN") {
+    trafficSystem.intersections.NS.state = "YELLOW";
+    trafficSystem.intersections.EW.state = ewState === "GREEN" ? "RED" : ewState;
+    updateUI();
+    addLog("North-South changed GREEN -> YELLOW.");
+    await delay(1400);
+  }
+
+  if (ewState === "GREEN") {
+    trafficSystem.intersections.EW.state = "YELLOW";
+    trafficSystem.intersections.NS.state = trafficSystem.intersections.NS.state === "GREEN" ? "RED" : trafficSystem.intersections.NS.state;
+    updateUI();
+    addLog("East-West changed GREEN -> YELLOW.");
+    await delay(1400);
+  }
+
+  trafficSystem.pedestrian.enabled = true;
+  trafficSystem.pedestrian.isDeactivating = false;
+  trafficSystem.pedestrian.state = "WALK";
+  trafficSystem.queuedSwitch = false;
+  trafficSystem.intersections.NS.state = "RED";
+  trafficSystem.intersections.EW.state = "RED";
+  trafficSystem.isTransitioning = false;
+  updateUI();
+  addLog("Pedestrian mode enabled. Vehicle signals locked to RED; crossing opened.");
+}
+
+/**
+ * Smoothly exits pedestrian mode by showing a brief RUN warning before STOP, then resuming normal logic.
+ * Control flow: async sequence ensures a visual transition before handing control back to light switching.
+ * Event loop note: await pauses let the UI render each pedestrian phase while preserving responsiveness.
+ */
+async function deactivatePedestrianMode() {
+  if (trafficSystem.pedestrian.isDeactivating || !trafficSystem.pedestrian.enabled) {
+    return;
+  }
+
+  trafficSystem.pedestrian.isDeactivating = true;
+  trafficSystem.isTransitioning = true;
+  trafficSystem.pedestrian.state = "WALK";
+  updateUI();
+  await delay(2400);
+
+  trafficSystem.pedestrian.state = "RUN";
+  updateUI();
+  await delay(1600);
+
+  trafficSystem.pedestrian.state = "STOP";
+  updateUI();
+  await delay(1200);
+
+  trafficSystem.pedestrian.enabled = false;
+  trafficSystem.pedestrian.isDeactivating = false;
+  trafficSystem.pedestrian.state = "DISABLED";
+  trafficSystem.isTransitioning = false;
+  updateUI();
+  addLog("Pedestrian mode disabled. Vehicle signals returned to automatic operation.");
 }
 
 /**
@@ -215,7 +432,7 @@ function clearLogs() {
  * intermediate states (yellow/red) at real time intervals.
  */
 async function transitionLights() {
-  if (trafficSystem.isTransitioning) {
+  if (trafficSystem.isTransitioning || trafficSystem.pedestrian.enabled || trafficSystem.pedestrian.isDeactivating) {
     return;
   }
 
@@ -238,6 +455,13 @@ async function transitionLights() {
   updateUI();
   addLog(`${from} set to RED. All-red hold (1s)`);
   await delay(1000);
+
+  if (trafficSystem.pedestrian.enabled) {
+    trafficSystem.isTransitioning = false;
+    updateUI();
+    addLog("Transition halted: pedestrian mode has priority.");
+    return;
+  }
 
   trafficSystem.intersections[to].state = "GREEN";
   trafficSystem.activeDirection = to;
@@ -263,6 +487,11 @@ async function transitionLights() {
  * we prevent overlapping async transitions from ever running in parallel.
  */
 function handleLogic() {
+  if (trafficSystem.pedestrian.enabled) {
+    addLog("Ignored: vehicle switching disabled while pedestrian mode is ON.");
+    return;
+  }
+
   if (trafficSystem.isTransitioning) {
     if (!trafficSystem.queuedSwitch) {
       trafficSystem.queuedSwitch = true;
@@ -284,12 +513,16 @@ function handleLogic() {
  */
 function init() {
   UI.switchBtn = document.querySelector("#switchBtn");
+  UI.togglePedBtn = document.querySelector("#togglePedBtn");
+  UI.pedModeStatus = document.querySelector("#pedModeStatus");
   UI.clearLogsBtn = document.querySelector("#clearLogsBtn");
   UI.nsText = document.querySelector("#ns-state-text");
   UI.ewText = document.querySelector("#ew-state-text");
+  UI.pedStateText = document.querySelector("#ped-state-text");
   UI.logList = document.querySelector("#logList");
   UI.nsRoad = document.querySelector("#ns-road");
   UI.ewRoad = document.querySelector("#ew-road");
+  UI.pedestrianLane = document.querySelector("#pedestrian-lane");
 
   UI.nsLights = {
     red: document.querySelector("#ns-red"),
@@ -303,7 +536,14 @@ function init() {
     green: document.querySelector("#ew-green")
   };
 
+  UI.pedLights = {
+    stop: document.querySelector("#ped-red"),
+    walk: document.querySelector("#ped-green")
+  };
+  UI.pedLightBox = document.querySelector("#ped-signal");
+
   UI.switchBtn.addEventListener("click", handleLogic);
+  UI.togglePedBtn.addEventListener("click", togglePedestrianSystem);
   UI.clearLogsBtn.addEventListener("click", clearLogs);
 
   initVehicleSimulation();
