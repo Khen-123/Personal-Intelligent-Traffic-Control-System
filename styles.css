@@ -1,0 +1,448 @@
+:root {
+  --bg-primary: #090b14;
+  --bg-secondary: #11162b;
+  --glass: rgba(255, 255, 255, 0.08);
+  --glass-border: rgba(255, 255, 255, 0.18);
+  --text-primary: #eaf2ff;
+  --text-secondary: #c4d3eb;
+  --green: #2aff88;
+  --yellow: #ffd23f;
+  --red: #ff4d67;
+  --shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: Inter, Segoe UI, Roboto, sans-serif;
+  color: var(--text-primary);
+  background: radial-gradient(circle at 20% 20%, #152041 0%, var(--bg-primary) 45%, #05060c 100%);
+  overflow-x: hidden;
+}
+
+.app-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(circle at 80% 20%, rgba(80, 120, 255, 0.25), transparent 38%),
+    radial-gradient(circle at 20% 80%, rgba(0, 255, 180, 0.15), transparent 35%);
+  filter: blur(30px);
+}
+
+.dashboard {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  padding: 1rem;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.card {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 18px;
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  box-shadow: var(--shadow);
+}
+
+.simulation-card {
+  padding: 1rem;
+}
+
+.logs-card {
+  padding: 1rem;
+  max-height: 420px;
+  overflow: auto;
+}
+
+.card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.card-header h1 {
+  margin: 0;
+  font-size: clamp(1.1rem, 4vw, 1.7rem);
+  letter-spacing: 0.2px;
+}
+
+.glass-btn {
+  border: 1px solid var(--glass-border);
+  background: linear-gradient(135deg, rgba(60, 130, 255, 0.3), rgba(0, 255, 180, 0.18));
+  color: var(--text-primary);
+  padding: 0.7rem 1rem;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.glass-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.15);
+}
+
+.glass-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.intersection-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.intersection {
+  padding: 1rem;
+  border-radius: 14px;
+  background: rgba(10, 14, 28, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.intersection h2 {
+  margin-top: 0;
+  margin-bottom: 0.8rem;
+  color: var(--text-secondary);
+  font-size: 1rem;
+}
+
+.traffic-light {
+  width: 90px;
+  padding: 0.6rem;
+  border-radius: 999px;
+  background: #0a0d18;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: grid;
+  gap: 0.45rem;
+}
+
+.light {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  opacity: 0.22;
+  transition: opacity 0.25s ease, box-shadow 0.25s ease;
+}
+
+.light.active {
+  opacity: 1;
+}
+
+.light.red.active {
+  background: var(--red);
+  box-shadow: 0 0 20px rgba(255, 77, 103, 0.8);
+}
+
+.light.yellow.active {
+  background: var(--yellow);
+  box-shadow: 0 0 20px rgba(255, 210, 63, 0.85);
+}
+
+.light.green.active {
+  background: var(--green);
+  box-shadow: 0 0 20px rgba(42, 255, 136, 0.8);
+}
+
+.state-label {
+  margin: 0.8rem 0 0;
+  color: var(--text-secondary);
+}
+
+.roads-panel {
+  margin-top: 1.1rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.road-card {
+  padding: 0.9rem;
+  border-radius: 14px;
+  background: rgba(10, 14, 28, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.road-card h3 {
+  margin: 0 0 0.8rem;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.road {
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(10, 12, 18, 0.95), rgba(22, 25, 37, 0.95));
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+  position: relative;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    inset 0 14px 24px rgba(255, 255, 255, 0.03),
+    inset 0 -14px 28px rgba(0, 0, 0, 0.35);
+}
+
+.road-ns {
+  height: 210px;
+}
+
+.road-ew {
+  height: 140px;
+}
+
+.lane {
+  position: relative;
+  height: 50%;
+}
+
+.road::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.road::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  pointer-events: none;
+  z-index: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.04), transparent 35%, rgba(0, 0, 0, 0.2));
+}
+
+.lane-divider {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  border-top: 2px dashed rgba(255, 255, 255, 0.45);
+  z-index: 1;
+}
+
+.road-ew .lane-divider {
+  left: 10px;
+  right: 10px;
+}
+
+.road-ns .lane {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  height: 100%;
+}
+
+.road-ns .lane-a {
+  left: 0;
+}
+
+.road-ns .lane-b {
+  right: 0;
+}
+
+.road-ns .lane-divider {
+  top: 12px;
+  bottom: 12px;
+  left: 50%;
+  right: auto;
+  width: 0;
+  transform: translateX(-50%);
+  border-top: none;
+  border-left: 2px dashed rgba(255, 255, 255, 0.45);
+}
+
+.road-ew .lane {
+  height: 50%;
+}
+
+.road-ew .lane-a {
+  top: 0;
+}
+
+.road-ew .lane-b {
+  bottom: 0;
+}
+
+.road .lane-a::after,
+.road .lane-b::after {
+  content: "";
+  position: absolute;
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.road-ew .lane-a::after,
+.road-ew .lane-b::after {
+  left: 0;
+  right: 0;
+  top: 8px;
+  height: 2px;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.55) 0 10px,
+    transparent 10px 22px
+  );
+}
+
+.road-ns .lane-a::after,
+.road-ns .lane-b::after {
+  top: 0;
+  bottom: 0;
+  left: 8px;
+  width: 2px;
+  background: repeating-linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.5) 0 10px,
+    transparent 10px 22px
+  );
+}
+
+.crosswalk {
+  position: absolute;
+  z-index: 1;
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.crosswalk-start,
+.crosswalk-end {
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.78) 0 8px,
+    transparent 8px 14px
+  );
+}
+
+.road-ew .crosswalk-start,
+.road-ew .crosswalk-end {
+  left: 0;
+  right: 0;
+  height: 10px;
+}
+
+.road-ew .crosswalk-start {
+  top: 4px;
+}
+
+.road-ew .crosswalk-end {
+  bottom: 4px;
+}
+
+.road-ns .crosswalk-start,
+.road-ns .crosswalk-end {
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  background: repeating-linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.78) 0 8px,
+    transparent 8px 14px
+  );
+}
+
+.road-ns .crosswalk-start {
+  left: 4px;
+}
+
+.road-ns .crosswalk-end {
+  right: 4px;
+}
+
+.road[data-signal="GREEN"] {
+  box-shadow: inset 0 0 0 1px rgba(42, 255, 136, 0.5);
+}
+
+.road[data-signal="YELLOW"] {
+  box-shadow: inset 0 0 0 1px rgba(255, 210, 63, 0.6);
+}
+
+.road[data-signal="RED"] {
+  box-shadow: inset 0 0 0 1px rgba(255, 77, 103, 0.55);
+}
+
+.vehicle {
+  position: absolute;
+  width: 38px;
+  height: 18px;
+  border-radius: 7px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  background: linear-gradient(135deg, #6db4ff, #2f70ff);
+  box-shadow: 0 0 14px rgba(79, 145, 255, 0.55);
+}
+
+.vehicle::before {
+  content: "";
+  position: absolute;
+  inset: 3px 7px;
+  border-radius: 4px;
+  background: rgba(230, 244, 255, 0.75);
+}
+
+.vehicle:nth-child(2n) {
+  background: linear-gradient(135deg, #44f4c0, #16b27c);
+  box-shadow: 0 0 14px rgba(63, 230, 181, 0.5);
+}
+
+.road-ns .vehicle {
+  width: 18px;
+  height: 38px;
+}
+
+.log-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+  font-size: 0.92rem;
+}
+
+.log-list li {
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border-left: 3px solid rgba(130, 170, 255, 0.7);
+}
+
+@media (min-width: 768px) {
+  .dashboard {
+    grid-template-columns: 2fr 1fr;
+    align-items: start;
+    gap: 1.2rem;
+    padding: 1.2rem;
+  }
+
+  .card-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .intersection-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .roads-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .logs-card {
+    min-height: 100%;
+  }
+}

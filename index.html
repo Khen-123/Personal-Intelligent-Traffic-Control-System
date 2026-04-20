@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Intelligent Traffic Control Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-bg"></div>
+
+  <main class="dashboard">
+    <section class="card simulation-card">
+      <header class="card-header">
+        <h1>Intelligent Traffic Control Dashboard</h1>
+        <button id="switchBtn" class="glass-btn">Trigger Safe Switch</button>
+      </header>
+
+      <div class="intersection-grid">
+        <article class="intersection" id="ns-intersection">
+          <h2>North-South</h2>
+          <div class="traffic-light" data-direction="NS">
+            <span class="light red" id="ns-red"></span>
+            <span class="light yellow" id="ns-yellow"></span>
+            <span class="light green" id="ns-green"></span>
+          </div>
+          <p class="state-label">State: <strong id="ns-state-text">RED</strong></p>
+        </article>
+
+        <article class="intersection" id="ew-intersection">
+          <h2>East-West</h2>
+          <div class="traffic-light" data-direction="EW">
+            <span class="light red" id="ew-red"></span>
+            <span class="light yellow" id="ew-yellow"></span>
+            <span class="light green" id="ew-green"></span>
+          </div>
+          <p class="state-label">State: <strong id="ew-state-text">RED</strong></p>
+        </article>
+      </div>
+
+      <section class="roads-panel">
+        <article class="road-card">
+          <h3>North-South Road</h3>
+          <div class="road road-ns" id="ns-road" data-direction="NS" data-signal="GREEN">
+            <div class="crosswalk crosswalk-start" aria-hidden="true"></div>
+            <div class="lane lane-a">
+              <span class="vehicle vehicle-ns" data-direction="NS"></span>
+              <span class="vehicle vehicle-ns" data-direction="NS"></span>
+            </div>
+            <div class="lane-divider"></div>
+            <div class="lane lane-b">
+              <span class="vehicle vehicle-ns" data-direction="NS"></span>
+              <span class="vehicle vehicle-ns" data-direction="NS"></span>
+            </div>
+            <div class="crosswalk crosswalk-end" aria-hidden="true"></div>
+          </div>
+        </article>
+
+        <article class="road-card">
+          <h3>East-West Road</h3>
+          <div class="road road-ew" id="ew-road" data-direction="EW" data-signal="RED">
+            <div class="crosswalk crosswalk-start" aria-hidden="true"></div>
+            <div class="lane lane-a">
+              <span class="vehicle vehicle-ew" data-direction="EW"></span>
+              <span class="vehicle vehicle-ew" data-direction="EW"></span>
+            </div>
+            <div class="lane-divider"></div>
+            <div class="lane lane-b">
+              <span class="vehicle vehicle-ew" data-direction="EW"></span>
+              <span class="vehicle vehicle-ew" data-direction="EW"></span>
+            </div>
+            <div class="crosswalk crosswalk-end" aria-hidden="true"></div>
+          </div>
+        </article>
+      </section>
+    </section>
+
+    <aside class="card logs-card">
+      <h2>System Logs</h2>
+      <ul id="logList" class="log-list"></ul>
+    </aside>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
