@@ -13,29 +13,45 @@
     <section class="card simulation-card">
       <header class="card-header">
         <h1>Intelligent Traffic Control Dashboard</h1>
+        <div class="mode-badge" id="modeBadge">MANUAL MODE</div>
       </header>
 
       <div class="intersection-grid">
         <article class="intersection" id="ns-intersection">
           <h2>North-South</h2>
+          <div class="timer-display" id="ns-timer" data-state="DISABLED" aria-live="polite">--</div>
           <div class="traffic-light" data-direction="NS">
-            <span class="light red" id="ns-red"></span>
-            <span class="light yellow" id="ns-yellow"></span>
-            <span class="light green" id="ns-green"></span>
+            <span class="light red" id="ns-red">
+              <span class="light-caption">Stop</span>
+            </span>
+            <span class="light yellow" id="ns-yellow">
+              <span class="light-caption">Slow</span>
+            </span>
+            <span class="light green" id="ns-green">
+              <span class="light-caption">Go</span>
+            </span>
           </div>
-          <p class="state-label">State: <strong id="ns-state-text">RED</strong></p>
+          <p class="state-label">State: <strong id="ns-state-text">GREEN</strong></p>
         </article>
 
         <article class="intersection" id="ew-intersection">
           <h2>East-West</h2>
+          <div class="timer-display" id="ew-timer" data-state="DISABLED" aria-live="polite">--</div>
           <div class="signal-cluster">
             <div class="traffic-light" data-direction="EW">
-              <span class="light red" id="ew-red"></span>
-              <span class="light yellow" id="ew-yellow"></span>
-              <span class="light green" id="ew-green"></span>
+              <span class="light red" id="ew-red">
+                <span class="light-caption">Stop</span>
+              </span>
+              <span class="light yellow" id="ew-yellow">
+                <span class="light-caption">Slow</span>
+              </span>
+              <span class="light green" id="ew-green">
+                <span class="light-caption">Go</span>
+              </span>
             </div>
             <div class="pedestrian-signal" id="ped-signal" data-state="DISABLED" aria-label="Pedestrian signal">
               <span class="ped-signal-label">Pedestrian</span>
+              <div class="ped-timer-display" id="ped-timer" data-state="DISABLED" aria-live="polite">--</div>
               <span class="ped-light ped-stop" id="ped-red"></span>
               <span class="ped-light ped-walk" id="ped-green"></span>
               <strong id="ped-state-text">DISABLED</strong>
@@ -101,8 +117,43 @@
 
     <section class="card control-panel" aria-label="Traffic Control Panel">
       <h2>Control Panel</h2>
+
+      <!-- ── Unified Auto Mode Timer Configuration ── -->
+      <div class="timing-config" id="timingConfig">
+        <h3 class="config-title">
+          ⏱ Auto Mode — Phase Duration
+          <span class="config-note">Applies to all phases (Green / Yellow derived proportionally)</span>
+        </h3>
+        <div class="slider-row">
+          <span class="slider-label">
+            <span class="timing-dot green-dot"></span>2s
+          </span>
+          <input
+            type="range"
+            id="timerDuration"
+            class="duration-slider"
+            min="2"
+            max="30"
+            step="1"
+            value="10"
+            aria-label="Auto mode phase duration in seconds"
+          />
+          <span class="slider-label">
+            30s<span class="timing-dot green-dot"></span>
+          </span>
+          <span class="duration-value-badge" id="timerDurationValue">10s</span>
+        </div>
+        <p class="slider-hint">
+          <span class="hint-dot green-dot"></span> Green phase = selected duration &nbsp;·&nbsp;
+          <span class="hint-dot yellow-dot"></span> Yellow = up to 3 s &nbsp;·&nbsp;
+          <span class="hint-dot red-dot"></span> Red buffer = 1 s &nbsp;·&nbsp;
+          <em>Manual mode ignores all timers</em>
+        </p>
+      </div>
+
       <div class="control-actions">
         <button id="switchBtn" class="glass-btn">Trigger Safe Switch</button>
+        <button id="autoModeBtn" class="glass-btn auto-btn" type="button">Enable Auto Mode</button>
         <button id="togglePedBtn" class="glass-btn secondary-btn" type="button" aria-pressed="false">Pedestrian System: OFF</button>
         <span id="pedModeStatus" class="mode-status" aria-live="polite">Pedestrian Mode: OFF</span>
         <button id="clearLogsBtn" class="glass-btn secondary-btn" type="button">Clear Logs</button>
